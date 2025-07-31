@@ -1,44 +1,41 @@
-import einops as ep
+import einops
 import numpy as np
 
-#Measurements 
-e_1=1/np.sqrt(8)*np.array( [-1-1j,0,-2j,-1+1j] )
-e_2=1/np.sqrt(8)*np.array( [1-1j,2j,0,1+1j] )
-e_3=1/np.sqrt(8)*np.array( [-1+1j,2j,0,-1-1j] )
-e_4=1/np.sqrt(8)*np.array( [1+1j,0,-2j,1-1j] )
-
-e_1=np.transpose(e_1).conj()
-e_2=np.transpose(e_2).conj()
-e_3=np.transpose(e_3).conj()
-e_4=np.transpose(e_4).conj()
+# Measurements
+e_1 = np.array([[-1 - 1j, 0, -2j, -1 + 1j]])
+e_2 = np.array([[1 - 1j, 2j, 0, 1 + 1j]])
+e_3 = np.array([[-1 + 1j, 2j, 0, -1 - 1j]])
+e_4 = np.array([[1 + 1j, 0, -2j, 1 - 1j]])
 
 
-M_1=np.outer(e_1,np.transpose(e_1.conj()))
-M_2=np.outer(e_2,np.transpose(e_2.conj()))
-M_3=np.outer(e_3,np.transpose(e_3.conj()))
-M_4=np.outer(e_4,np.transpose(e_4.conj()))
+M_1 = np.matmul(e_1.T, e_1.conj())
+M_2 = np.matmul(e_2.T, e_2.conj())
+M_3 = np.matmul(e_3.T, e_3.conj())
+M_4 = np.matmul(e_4.T, e_4.conj())
 
-M=[M_1,M_2,M_3,M_4]
+M = [M_1.reshape((2,2,2,2)),
+     M_2.reshape((2,2,2,2)),
+     M_3.reshape((2,2,2,2)),
+     M_4.reshape((2,2,2,2))]
+
+# State
+psi = np.array([[0, 1, -1, 0]])
+rho = np.matmul(psi.T, psi.conj())
+rho = rho.reshape((2,2,2,2))
 
 
+P_ABC = np.zeros((4,4,4), dtype=float)
+for a,b,c in np.ndindex((4, 4, 4)):
+    P_ABC[a, b, c] = einops.einsum(rho, rho, rho, M[a], M[b], M[c],
+                                   (  'ABaket ABbket ABabra ABbbra , '
+                                    + 'BCbket BCcket BCbbra BCcbra , '
+                                    + 'CAcket CAaket CAcbra CAabra , '
+                                    + 'CAaket ABaket CAabra ABabra , '
+                                    + 'ABbket BCbket ABbbra BCbbra , '
+                                    + 'BCcket CAcket BCcbra CAcbra'
+                                    + '-> '))/4096
+print(256*P_ABC[0,0,0])
+print(256*P_ABC[0,0,1])
+print(256*P_ABC[0,1,2])
+print(P_ABC.sum())
 
-#State
-psi=1/np.sqrt(2)*np.array( [0,1,-1,0] )
-rho=np.outer(psi,np.transpose(psi.conj()))
-print(rho)
-P0=0
-for i in range(4):
-    for j in range(4):
-        for k in range(4):
-            for l in range(4):
-                for m in range(4):
-                    for n in range(4):
-                        P0=rho[i][j]*rho[k][l]*rho[m][n]*M_1[i][n]*M_1[k][j]*M_1[m][l]+P0
-
-print(P0)
-"""P=np.zeros((4,4,4))
-for a in range(4):
-    for b in range(4):
-        for c in range(4):
-            P[a,b,c]=np.einsum("ij, kl, mn, in, jk , lm -> ", rho,rho, rho, M[a], M[b], M[c])
-print(P)"""
